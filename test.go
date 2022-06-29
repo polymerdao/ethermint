@@ -33,6 +33,8 @@ import (
 	ethermint "github.com/tharsis/ethermint/types"
 	evmkeeper "github.com/tharsis/ethermint/x/evm/keeper"
 	evmtypes "github.com/tharsis/ethermint/x/evm/types"
+	feemarketkeeper "github.com/tharsis/ethermint/x/feemarket/keeper"
+	feemarkettypes "github.com/tharsis/ethermint/x/feemarket/types"
 )
 
 /*
@@ -121,7 +123,6 @@ func setupEVMKeeper(sdkCtx sdk.Context, cms sdk.CommitMultiStore) *evmkeeper.Kee
 	tkeys := sdk.NewTransientStoreKeys(evmtypes.TransientKey, paramstypes.TStoreKey)
 	for _, key := range keys {
 		cms.MountStoreWithDB(key, sdk.StoreTypeIAVL, nil)
-		log.Println("Mounting key ->", key)
 	}
 	for _, key := range tkeys {
 		cms.MountStoreWithDB(key, sdk.StoreTypeTransient, nil)
@@ -132,7 +133,7 @@ func setupEVMKeeper(sdkCtx sdk.Context, cms sdk.CommitMultiStore) *evmkeeper.Kee
 	for _, moduleName := range []string{
 		evmtypes.ModuleName, authtypes.ModuleName, banktypes.ModuleName,
 		stakingtypes.ModuleName,
-		// feemarkettypes.ModuleName,
+		feemarkettypes.ModuleName,
 	} {
 		paramsKeeper.Subspace(moduleName)
 	}
@@ -153,20 +154,24 @@ func setupEVMKeeper(sdkCtx sdk.Context, cms sdk.CommitMultiStore) *evmkeeper.Kee
 	)
 
 	// NB: Feemarket is optional.
-	//feemarketSubspace, _ := paramsKeeper.GetSubspace(feemarkettypes.ModuleName)
-	//feemarketKeeper := feemarketkeeper.NewKeeper(
-	//	appCodec, keys[feemarkettypes.StoreKey], feemarketSubspace,
-	//)
+	feemarketSubspace, _ := paramsKeeper.GetSubspace(feemarkettypes.ModuleName)
+	feemarketKeeper := feemarketkeeper.NewKeeper(
+		appCodec, keys[feemarkettypes.StoreKey], feemarketSubspace,
+	)
+	params := feemarkettypes.DefaultParams()
+	for _, pair := range params.ParamSetPairs() {
+		feemarketSubspace.Set(sdkCtx, pair.Key, pair.Value)
+	}
 
 	evmSubspace, _ := paramsKeeper.GetSubspace(evmtypes.ModuleName)
 	evmKeeper := evmkeeper.NewKeeper(
 		appCodec, keys[evmtypes.StoreKey], tkeys[evmtypes.TransientKey], evmSubspace,
 		accountKeeper, bankKeeper, stakingKeeper,
-		nil, // removed feemarket
+		feemarketKeeper,
 		evmtypes.TracerJSON,
 	)
-	params := evmtypes.DefaultParams()
-	for _, pair := range params.ParamSetPairs() {
+	evmParams := evmtypes.DefaultParams()
+	for _, pair := range evmParams.ParamSetPairs() {
 		evmSubspace.Set(sdkCtx, pair.Key, pair.Value)
 	}
 

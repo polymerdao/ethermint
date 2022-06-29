@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"log"
 	"math"
 	"math/big"
 
@@ -43,17 +44,19 @@ func (k *Keeper) EVMConfig(ctx sdk.Context) (*types.EVMConfig, error) {
 	ethCfg := params.ChainConfig.EthereumConfig(k.eip155ChainID)
 
 	// get the coinbase address from the block proposer
-	coinbase, err := k.GetCoinbaseAddress(ctx)
-	if err != nil {
-		return nil, sdkerrors.Wrap(err, "failed to obtain coinbase address")
-	}
+	//coinbase, err := k.GetCoinbaseAddress(ctx)
+	//if err != nil {
+	//	log.Println("fail coinbase")
+	//	return nil, sdkerrors.Wrap(err, "failed to obtain coinbase address")
+	//}
 
 	baseFee := k.GetBaseFee(ctx, ethCfg)
 	return &types.EVMConfig{
 		Params:      params,
 		ChainConfig: ethCfg,
-		CoinBase:    coinbase,
-		BaseFee:     baseFee,
+		//CoinBase:    coinbase,
+		CoinBase: common.Address{},
+		BaseFee:  baseFee,
 	}, nil
 }
 
@@ -513,6 +516,8 @@ func (k *Keeper) ResetGasMeterAndConsumeGas(ctx sdk.Context, gasUsed uint64) {
 // GetCoinbaseAddress returns the block proposer's validator operator address.
 func (k Keeper) GetCoinbaseAddress(ctx sdk.Context) (common.Address, error) {
 	consAddr := sdk.ConsAddress(ctx.BlockHeader().ProposerAddress)
+	log.Println(ctx.BlockHeader())
+	log.Println("looking for ->", consAddr)
 	validator, found := k.stakingKeeper.GetValidatorByConsAddr(ctx, consAddr)
 	if !found {
 		return common.Address{}, sdkerrors.Wrapf(
