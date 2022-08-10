@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	abci "github.com/tendermint/tendermint/abci/types"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
@@ -52,11 +53,20 @@ func (app *EthermintApp) ExportAppStateAndValidators(
 		return servertypes.ExportedApp{}, err
 	}
 
+	cp := app.BaseApp.GetConsensusParams(ctx)
 	return servertypes.ExportedApp{
-		AppState:        appState,
-		Validators:      validators,
-		Height:          height,
-		ConsensusParams: app.BaseApp.GetConsensusParams(ctx),
+		AppState:   appState,
+		Validators: validators,
+		Height:     height,
+		ConsensusParams: &abci.ConsensusParams{
+			Block: &abci.BlockParams{
+				MaxBytes: cp.Block.MaxBytes,
+				MaxGas:   cp.Block.MaxGas,
+			},
+			Evidence:  &cp.Evidence,
+			Validator: &cp.Validator,
+			Version:   &cp.Version,
+		},
 	}, nil
 }
 

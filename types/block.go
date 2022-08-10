@@ -1,6 +1,9 @@
 package types
 
-import sdk "github.com/cosmos/cosmos-sdk/types"
+import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
+)
 
 // BlockGasLimit returns the max gas (limit) defined in the block gas meter. If the meter is not
 // set, it returns the max gas from the application consensus params.
@@ -15,7 +18,8 @@ func BlockGasLimit(ctx sdk.Context) uint64 {
 
 	// Otherwise get from the consensus parameters
 	cp := ctx.ConsensusParams()
-	if cp == nil || cp.Block == nil {
+	var empty tmproto.BlockParams
+	if cp == nil || cp.Block == empty {
 		return 0
 	}
 
